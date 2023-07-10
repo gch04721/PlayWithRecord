@@ -92,12 +92,14 @@ class MainActivity : AppCompatActivity() {
         val audioFileSelect = registerForActivityResult(
             ActivityResultContracts.GetContent(),
             ActivityResultCallback {
-                isPlayable = true
-                chkLoop.isEnabled=isPlayable
-                this.filePath = "/storage/emulated/0/${it?.lastPathSegment!!.split(":")[1]}"
-                this.audioName = it?.lastPathSegment!!.split(":")[1]
-                fileNameView.text = this.audioName
-                setBtnCond()
+                if (it != null) {
+                    isPlayable = true
+                    chkLoop.isEnabled=isPlayable
+                    this.filePath = "/storage/emulated/0/${it?.lastPathSegment!!.split(":")[1]}"
+                    this.audioName = it.lastPathSegment!!.split(":")[1]
+                    fileNameView.text = this.audioName
+                    setBtnCond()
+                }
             }
         ) // get audio file path
 
@@ -223,15 +225,29 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun requestPermission() {
-        ActivityCompat.requestPermissions(
-            this@MainActivity,
-            arrayOf(
-                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.RECORD_AUDIO,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ),
-            REQUEST_PERMISSION_CODE
-        )
+        if(Build.VERSION.SDK_INT >= 33){
+            ActivityCompat.requestPermissions(
+                this@MainActivity,
+
+                arrayOf(
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.READ_MEDIA_AUDIO
+                ),
+                REQUEST_PERMISSION_CODE
+            )
+        } else{
+            ActivityCompat.requestPermissions(
+                this@MainActivity,
+
+                arrayOf(
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                ),
+                REQUEST_PERMISSION_CODE
+            )
+        }
+
     }
 
 
@@ -241,35 +257,63 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            REQUEST_PERMISSION_CODE -> if (grantResults.size > 0) {
-                val StoragePermission = grantResults[0] == PackageManager.PERMISSION_GRANTED
-                val RecordPermission = grantResults[1] == PackageManager.PERMISSION_GRANTED
-                val ReadStoragePermission = grantResults[2] == PackageManager.PERMISSION_GRANTED
-                if (StoragePermission && RecordPermission && ReadStoragePermission) {
-                    Toast.makeText(this@MainActivity, "Permission Granted", Toast.LENGTH_LONG)
-                        .show()
-                } else {
-                    Toast.makeText(this@MainActivity, "Permission Denied", Toast.LENGTH_LONG).show()
+        if(Build.VERSION.SDK_INT >= 33){
+            when (requestCode) {
+                REQUEST_PERMISSION_CODE -> if (grantResults.size > 0) {
+                    val RecordPermission = grantResults[0] == PackageManager.PERMISSION_GRANTED
+                    val ReadStoragePermission = grantResults[1] == PackageManager.PERMISSION_GRANTED
+                    if (RecordPermission && ReadStoragePermission) {
+                        Toast.makeText(this@MainActivity, "Permission Granted", Toast.LENGTH_LONG)
+                            .show()
+                    } else {
+                        Toast.makeText(this@MainActivity, "Permission Denied", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }else{
+            when (requestCode) {
+                REQUEST_PERMISSION_CODE -> if (grantResults.size > 0) {
+                    val StoragePermission = grantResults[0] == PackageManager.PERMISSION_GRANTED
+                    val RecordPermission = grantResults[1] == PackageManager.PERMISSION_GRANTED
+                    val ReadStoragePermission = grantResults[2] == PackageManager.PERMISSION_GRANTED
+                    if (StoragePermission && RecordPermission && ReadStoragePermission) {
+                        Toast.makeText(this@MainActivity, "Permission Granted", Toast.LENGTH_LONG)
+                            .show()
+                    } else {
+                        Toast.makeText(this@MainActivity, "Permission Denied", Toast.LENGTH_LONG).show()
+                    }
                 }
             }
         }
+
     }
 
     fun checkPermission(): Boolean {
-        val result2: Int = ContextCompat.checkSelfPermission(
-            applicationContext,
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        )
-        val result: Int = ContextCompat.checkSelfPermission(
-            applicationContext,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
-        val result1: Int = ContextCompat.checkSelfPermission(
-            applicationContext,
-            Manifest.permission.RECORD_AUDIO
-        )
-        return result2 == PackageManager.PERMISSION_GRANTED && result == PackageManager.PERMISSION_GRANTED && result1 == PackageManager.PERMISSION_GRANTED
+        if(Build.VERSION.SDK_INT >= 33){
+            val result2: Int = ContextCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.READ_MEDIA_AUDIO
+            )
+            val result1: Int = ContextCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.RECORD_AUDIO
+            )
+            return result2 == PackageManager.PERMISSION_GRANTED  && result1 == PackageManager.PERMISSION_GRANTED
+        } else {
+            val result2: Int = ContextCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            )
+            val result: Int = ContextCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+            val result1: Int = ContextCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.RECORD_AUDIO
+            )
+            return result2 == PackageManager.PERMISSION_GRANTED && result == PackageManager.PERMISSION_GRANTED && result1 == PackageManager.PERMISSION_GRANTED
+        }
     }
 
 }
