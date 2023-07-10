@@ -33,6 +33,9 @@ class WavRecorder(private val output: String, var context: Context) {
     var bufferSize: Int = 0
     var writeBuffer: fQueue? = null
 
+    var isBottom = true
+
+
     init{
 
     }
@@ -65,7 +68,11 @@ class WavRecorder(private val output: String, var context: Context) {
         writeBuffer = fQueue(1000)
         Log.d("TEST", "startRecording: $writeBuffer")
 
-        recorder = AudioRecord(MediaRecorder.AudioSource.UNPROCESSED, RECORDER_SAMPLING_RATE, RECORDER_CHANNELS, RECORDER_AUDIO_ENCODING, bufferSize)
+        if(isBottom)
+            recorder = AudioRecord(MediaRecorder.AudioSource.UNPROCESSED, RECORDER_SAMPLING_RATE, RECORDER_CHANNELS, RECORDER_AUDIO_ENCODING, bufferSize)
+        else
+            recorder = AudioRecord(MediaRecorder.AudioSource.CAMCORDER, RECORDER_SAMPLING_RATE, RECORDER_CHANNELS, RECORDER_AUDIO_ENCODING, bufferSize)
+
         val i = recorder!!.state
         if(i == 1)
             recorder!!.startRecording()

@@ -11,12 +11,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.DocumentsContract
 import android.util.Log
-import android.widget.Button
-import android.widget.CheckBox
-import android.widget.EditText
-import android.widget.SeekBar
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -50,6 +45,7 @@ class MainActivity : AppCompatActivity() {
 
     // variable for recorder
     var isRecord = false
+    var isBottom = true
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,6 +72,18 @@ class MainActivity : AppCompatActivity() {
             findViewById<EditText>(R.id.recordFileName).isEnabled = isRecord
 
             setBtnCond()
+        }
+
+        val groupMic = findViewById<RadioGroup>(R.id.radioGroupMic)
+        groupMic.setOnCheckedChangeListener { _, i ->
+            if(i==R.id.radioBottom){
+                isBottom=true
+                recorder.isBottom = isBottom
+            }
+            if(i==R.id.radioBack) {
+                isBottom=false
+                recorder.isBottom = isBottom
+            }
         }
 
         //********* Player setting *************//

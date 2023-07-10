@@ -32,11 +32,34 @@
 
             <EditText
                 android:id="@+id/samplingRateValue"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:layout_gravity="right"
                 android:inputType="number"
                 android:text="48000" />
+
+            <RadioGroup
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:id="@+id/radioGroupMic">
+
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="back"
+                    android:id="@+id/radioBack"/>
+
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="bottom"
+                    android:checked="true"
+                    android:id="@+id/radioBottom"/>
+
+
+            </RadioGroup>
 
 
         </LinearLayout>
