@@ -43,10 +43,9 @@ class MainActivity : AppCompatActivity() {
     var isPlayable = false
     var pastSR = 0
     var sampleRate = 48000
-    var isLoop = false
+    var isStereo = true
 
     // variable for recorder
-
     var isBottom = true
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -93,7 +92,6 @@ class MainActivity : AppCompatActivity() {
         chkLoop.isEnabled=isPlayable
         chkLoop.setOnClickListener {
             isLoop = chkLoop.isChecked
-            player.isLoop = isLoop
             setBtnCond()
         } // set audio loop
 
@@ -108,6 +106,8 @@ class MainActivity : AppCompatActivity() {
                     this.filePath = "/storage/emulated/0/${it?.lastPathSegment!!.split(":")[1]}"
                     this.audioName = it.lastPathSegment!!.split(":")[1]
                     fileNameView.text = this.audioName
+                    findViewById<RadioButton>(R.id.radioMono).isEnabled = true
+                    findViewById<RadioButton>(R.id.radioStereo).isEnabled = true
                     setBtnCond()
                 }
             }
@@ -148,8 +148,24 @@ class MainActivity : AppCompatActivity() {
         else if(maxPeak <= 0f)
             maxPeak = 1.0E-5F
 
-        player = AudioPlayer(filePath, sampleRate)
+        player = AudioPlayer(filePath, sampleRate, isStereo)
         player.start() // make/run audio player thread
+
+        val groupChannel = findViewById<RadioGroup>(R.id.radioGroupChannel)
+        groupChannel.setOnCheckedChangeListener { _, i ->
+            if(i==R.id.radioStereo){
+                isStereo = true
+                player.interrupt()
+                player = AudioPlayer(filePath, sampleRate, isStereo)
+                player.start()
+            }
+            if(i==R.id.radioMono) {
+                isStereo = false
+                player.interrupt()
+                player = AudioPlayer(filePath, sampleRate, isStereo)
+                player.start()
+            }
+        }
 
         //********* Start / Stop button *************//
         btnStart = findViewById<Button>(R.id.startDual)
@@ -162,11 +178,10 @@ class MainActivity : AppCompatActivity() {
                 btnStop.isEnabled=true
             }
             if(isPlayable){
-                if(pastSR != sampleRate){
-                    player.interrupt()
-                    player = AudioPlayer(filePath, sampleRate)
-                    player.start()
-                }
+                player.interrupt()
+                player = AudioPlayer(filePath, sampleRate, isStereo)
+                player.start()
+
                 maxPeak = maxPeakEdit.text.toString().toFloat()
                 if(maxPeak > 1f)
                     maxPeak = 1f
@@ -194,6 +209,7 @@ class MainActivity : AppCompatActivity() {
                 btnStart.isEnabled=true
                 btnStop.isEnabled=false
                 player.requestStop()
+                player.interrupt()
             }
         }
 
@@ -332,6 +348,7 @@ class MainActivity : AppCompatActivity() {
     companion object{
         var isRecord = false
         var isRecordStart = false;
-
+        var isLoop = false
+        var isStopStreamRequested = false
     }
 }

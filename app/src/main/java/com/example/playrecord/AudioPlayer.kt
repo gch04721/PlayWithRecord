@@ -9,7 +9,7 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.RandomAccessFile
 
-class AudioPlayer(filePath : String, samplingRate: Int) : Thread() {
+class AudioPlayer(filePath : String, samplingRate: Int, isStereo: Boolean) : Thread() {
     var audioSessionID = 0
     var filePath = ""
     private lateinit var audioTrack : AudioTrack
@@ -19,16 +19,16 @@ class AudioPlayer(filePath : String, samplingRate: Int) : Thread() {
     var bufCnt = 0
     var isStarted = false
     var isPlaying = false
-    var isStopStreamRequested = false
-    var isLoop = false
+
     var isNew = false
     var volume = 0.1f
+
 
     lateinit var fd : RandomAccessFile
 
 
     init{
-        buildPlayer(samplingRate)
+        buildPlayer(samplingRate, isStereo)
     }
 
     override fun run(){
@@ -39,7 +39,7 @@ class AudioPlayer(filePath : String, samplingRate: Int) : Thread() {
             this.audioTrack.play()
             var playOffset = 0
 
-            while(!isInterrupted){
+            while((!isInterrupted) && isStarted){
                 for(i in audioBuffer.indices){
                     audioBuffer[i] = 0
                 }
@@ -48,7 +48,7 @@ class AudioPlayer(filePath : String, samplingRate: Int) : Thread() {
                     if(isNew && ((MainActivity.isRecord && MainActivity.isRecordStart) || !MainActivity.isRecord)){
                         this.audioTrack.setVolume(this.volume)
                         isPlaying = true
-                        isStopStreamRequested = false
+                        MainActivity.isStopStreamRequested = false
                         fd = RandomAccessFile(this.filePath, "r")
                         fd.seek(44)
                         playOffset = 0
@@ -56,11 +56,12 @@ class AudioPlayer(filePath : String, samplingRate: Int) : Thread() {
                         isPlaying = true
                     }
                     if(isPlaying){
-                        if(fd.read(audioBuffer, playOffset, bufSize) == -1 || isStopStreamRequested){
+                        if(fd.read(audioBuffer, playOffset, bufSize) == -1 || MainActivity.isStopStreamRequested){
                             fd.close()
-                            isNew = (isLoop && !isStopStreamRequested)
+                            isNew = (MainActivity.isLoop && !MainActivity.isStopStreamRequested)
+                            isStarted= (MainActivity.isLoop && !MainActivity.isStopStreamRequested)
                             isPlaying = false
-                            isStopStreamRequested = false
+                            MainActivity.isStopStreamRequested = false
                             continue
                         }
                     }
@@ -85,38 +86,67 @@ class AudioPlayer(filePath : String, samplingRate: Int) : Thread() {
         }
     }
 
-    private fun buildPlayer(samplingRate: Int ){
+    private fun buildPlayer(samplingRate: Int, isStereo: Boolean){
         this.filePath = filePath
-        bufSize = AudioTrack.getMinBufferSize(samplingRate,
-            AudioFormat.CHANNEL_OUT_STEREO,
-            AudioFormat.ENCODING_PCM_16BIT)
-        this.audioBuffer = ByteArray(bufSize)
 
-        val audioAttr = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_MEDIA)
-            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-            .build()
+        if (isStereo){
+            bufSize = AudioTrack.getMinBufferSize(samplingRate,
+                AudioFormat.CHANNEL_OUT_STEREO,
+                AudioFormat.ENCODING_PCM_16BIT)
+            this.audioBuffer = ByteArray(bufSize)
 
-        val audioFormat = AudioFormat.Builder()
-            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-            .setSampleRate(samplingRate)
-            .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
-            .build()
+            val audioAttr = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build()
 
-        audioSessionID= AudioManager.AUDIO_SESSION_ID_GENERATE
+            val audioFormat = AudioFormat.Builder()
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setSampleRate(samplingRate)
+                .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
+                .build()
 
-        this.audioTrack = AudioTrack(audioAttr, audioFormat, bufSize, AudioTrack.MODE_STREAM, audioSessionID)
+            audioSessionID= AudioManager.AUDIO_SESSION_ID_GENERATE
 
-        // 소리 크기 조절
-        this.audioTrack.setVolume(this.volume)
+            this.audioTrack = AudioTrack(audioAttr, audioFormat, bufSize, AudioTrack.MODE_STREAM, audioSessionID)
 
-        this.bufCnt = 0
-        this.isStarted = true
-        this.isPlaying = false
-        this.isStopStreamRequested = false
+            // 소리 크기 조절
+            this.audioTrack.setVolume(this.volume)
+
+            this.bufCnt = 0
+            this.isStarted = true
+            this.isPlaying = false
+        }else{
+            bufSize = AudioTrack.getMinBufferSize(samplingRate,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT)
+            this.audioBuffer = ByteArray(bufSize)
+
+            val audioAttr = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build()
+
+            val audioFormat = AudioFormat.Builder()
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setSampleRate(samplingRate)
+                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                .build()
+
+            audioSessionID= AudioManager.AUDIO_SESSION_ID_GENERATE
+
+            this.audioTrack = AudioTrack(audioAttr, audioFormat, bufSize, AudioTrack.MODE_STREAM, audioSessionID)
+
+            // 소리 크기 조절
+            this.audioTrack.setVolume(this.volume)
+
+            this.bufCnt = 0
+            this.isStarted = true
+            this.isPlaying = false
+        }
     }
 
     fun requestStop(){
-        this.isStopStreamRequested=true
+        MainActivity.isStopStreamRequested=true
     }
 }
