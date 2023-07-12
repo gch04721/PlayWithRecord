@@ -45,7 +45,7 @@ class AudioPlayer(filePath : String, samplingRate: Int) : Thread() {
                 }
 
                 try{
-                    if(isNew){
+                    if(isNew && ((MainActivity.isRecord && MainActivity.isRecordStart) || !MainActivity.isRecord)){
                         this.audioTrack.setVolume(this.volume)
                         isPlaying = true
                         isStopStreamRequested = false

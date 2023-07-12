@@ -168,6 +168,7 @@ class WavRecorder(private val output: String, var context: Context) {
                 if (temp == null) {
                     Thread.sleep(1)
                 } else {
+                    MainActivity.isRecordStart=true
                     os1!!.write(temp)
                     //                    Thread.sleep(10);
                 }

@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Environment
+import android.os.SystemClock.sleep
 import android.provider.DocumentsContract
 import android.util.Log
 import android.widget.*
@@ -20,6 +21,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
+import kotlinx.coroutines.delay
 import kotlin.math.ceil
 
 class MainActivity : AppCompatActivity() {
@@ -44,7 +46,7 @@ class MainActivity : AppCompatActivity() {
     var isLoop = false
 
     // variable for recorder
-    var isRecord = false
+
     var isBottom = true
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -165,6 +167,11 @@ class MainActivity : AppCompatActivity() {
                     player = AudioPlayer(filePath, sampleRate)
                     player.start()
                 }
+                maxPeak = maxPeakEdit.text.toString().toFloat()
+                if(maxPeak > 1f)
+                    maxPeak = 1f
+                else if(maxPeak <= 0f)
+                    maxPeak = 1.0E-5F
                 player.volume = maxPeak
                 player.filePath = this.filePath
                 player.isNew = true
@@ -179,6 +186,7 @@ class MainActivity : AppCompatActivity() {
         btnStop.setOnClickListener {
             if(isRecord) {
                 recorder.stopRecording()
+                isRecordStart=false
                 btnStart.isEnabled = true
                 btnStop.isEnabled = false
             }
@@ -236,7 +244,6 @@ class MainActivity : AppCompatActivity() {
         if(Build.VERSION.SDK_INT >= 33){
             ActivityCompat.requestPermissions(
                 this@MainActivity,
-
                 arrayOf(
                     Manifest.permission.RECORD_AUDIO,
                     Manifest.permission.READ_MEDIA_AUDIO
@@ -246,7 +253,6 @@ class MainActivity : AppCompatActivity() {
         } else{
             ActivityCompat.requestPermissions(
                 this@MainActivity,
-
                 arrayOf(
                     Manifest.permission.WRITE_EXTERNAL_STORAGE,
                     Manifest.permission.RECORD_AUDIO,
@@ -323,5 +329,9 @@ class MainActivity : AppCompatActivity() {
             return result2 == PackageManager.PERMISSION_GRANTED && result == PackageManager.PERMISSION_GRANTED && result1 == PackageManager.PERMISSION_GRANTED
         }
     }
+    companion object{
+        var isRecord = false
+        var isRecordStart = false;
 
+    }
 }
