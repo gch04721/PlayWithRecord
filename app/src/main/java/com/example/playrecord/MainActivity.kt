@@ -204,6 +204,14 @@ class MainActivity : AppCompatActivity() {
                 isRecordStart=false
                 btnStart.isEnabled = true
                 btnStop.isEnabled = false
+
+                var name = findViewById<EditText>(R.id.recordFileName).text
+                if (isInteger(name.toString().split("_").last())){
+                    var s = name.split("_").toMutableList()
+                    s[s.size-1] = (s[s.size-1].toInt()+1).toString()
+
+                    findViewById<EditText>(R.id.recordFileName).setText(s.joinToString("_"))
+                }
             }
             if(isPlayable && isLoop){
                 btnStart.isEnabled=true
@@ -213,6 +221,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+    }
+
+    private fun isInteger(s: String): Boolean {
+        return try {
+            s.toInt()
+            true
+        } catch (e: NumberFormatException) {
+            false
+        }
     }
 
     private fun setBtnCond(){
