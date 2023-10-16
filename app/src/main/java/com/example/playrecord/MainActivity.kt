@@ -28,6 +28,7 @@ class MainActivity : AppCompatActivity() {
     // Permission req code
     val REQUEST_PERMISSION_CODE = 1
     val REQUEST_FILE_SELECT = 2
+    val REQUEST_INTERNET = 3
 
     // button for start / stop
     lateinit var btnStart : Button
@@ -279,7 +280,8 @@ class MainActivity : AppCompatActivity() {
                 this@MainActivity,
                 arrayOf(
                     Manifest.permission.RECORD_AUDIO,
-                    Manifest.permission.READ_MEDIA_AUDIO
+                    Manifest.permission.READ_MEDIA_AUDIO,
+                    Manifest.permission.INTERNET
                 ),
                 REQUEST_PERMISSION_CODE
             )
@@ -289,7 +291,8 @@ class MainActivity : AppCompatActivity() {
                 arrayOf(
                     Manifest.permission.WRITE_EXTERNAL_STORAGE,
                     Manifest.permission.RECORD_AUDIO,
-                    Manifest.permission.READ_EXTERNAL_STORAGE
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.INTERNET
                 ),
                 REQUEST_PERMISSION_CODE
             )
@@ -309,7 +312,8 @@ class MainActivity : AppCompatActivity() {
                 REQUEST_PERMISSION_CODE -> if (grantResults.size > 0) {
                     val RecordPermission = grantResults[0] == PackageManager.PERMISSION_GRANTED
                     val ReadStoragePermission = grantResults[1] == PackageManager.PERMISSION_GRANTED
-                    if (RecordPermission && ReadStoragePermission) {
+                    val InternetPermission = grantResults[2] == PackageManager.PERMISSION_GRANTED
+                    if (RecordPermission && ReadStoragePermission && InternetPermission) {
                         Toast.makeText(this@MainActivity, "Permission Granted", Toast.LENGTH_LONG)
                             .show()
                     } else {
@@ -323,7 +327,8 @@ class MainActivity : AppCompatActivity() {
                     val StoragePermission = grantResults[0] == PackageManager.PERMISSION_GRANTED
                     val RecordPermission = grantResults[1] == PackageManager.PERMISSION_GRANTED
                     val ReadStoragePermission = grantResults[2] == PackageManager.PERMISSION_GRANTED
-                    if (StoragePermission && RecordPermission && ReadStoragePermission) {
+                    val InternetPermission = grantResults[2] == PackageManager.PERMISSION_GRANTED
+                    if (StoragePermission && RecordPermission && ReadStoragePermission && InternetPermission) {
                         Toast.makeText(this@MainActivity, "Permission Granted", Toast.LENGTH_LONG)
                             .show()
                     } else {
@@ -337,6 +342,10 @@ class MainActivity : AppCompatActivity() {
 
     fun checkPermission(): Boolean {
         if(Build.VERSION.SDK_INT >= 33){
+            val result3: Int = ContextCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.INTERNET
+            )
             val result2: Int = ContextCompat.checkSelfPermission(
                 applicationContext,
                 Manifest.permission.READ_MEDIA_AUDIO
@@ -345,8 +354,12 @@ class MainActivity : AppCompatActivity() {
                 applicationContext,
                 Manifest.permission.RECORD_AUDIO
             )
-            return result2 == PackageManager.PERMISSION_GRANTED  && result1 == PackageManager.PERMISSION_GRANTED
+            return result2 == PackageManager.PERMISSION_GRANTED  && result1 == PackageManager.PERMISSION_GRANTED && result3 == PackageManager.PERMISSION_GRANTED
         } else {
+            val result3: Int = ContextCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.INTERNET
+            )
             val result2: Int = ContextCompat.checkSelfPermission(
                 applicationContext,
                 Manifest.permission.READ_EXTERNAL_STORAGE
@@ -359,7 +372,7 @@ class MainActivity : AppCompatActivity() {
                 applicationContext,
                 Manifest.permission.RECORD_AUDIO
             )
-            return result2 == PackageManager.PERMISSION_GRANTED && result == PackageManager.PERMISSION_GRANTED && result1 == PackageManager.PERMISSION_GRANTED
+            return result2 == PackageManager.PERMISSION_GRANTED && result == PackageManager.PERMISSION_GRANTED && result1 == PackageManager.PERMISSION_GRANTED && result3 == PackageManager.PERMISSION_GRANTED
         }
     }
     companion object{
