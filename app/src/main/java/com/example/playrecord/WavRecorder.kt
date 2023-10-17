@@ -43,6 +43,7 @@ class WavRecorder(private val output: String, var context: Context) {
     private fun getFilename(): String {
         val name = (context as Activity).findViewById<View>(R.id.recordFileName) as EditText
         var nameOfTheFile = name.text.toString()
+        Log.d("RECORDER", "getFilename: $nameOfTheFile")
         nameOfTheFile += ".wav"
         return "$output/$nameOfTheFile"
     }

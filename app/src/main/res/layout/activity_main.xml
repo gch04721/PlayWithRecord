@@ -48,15 +48,15 @@
                 <RadioButton
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="back"
-                    android:id="@+id/radioBack"/>
+                    android:text="Auto"
+                    android:id="@+id/radioAuto"/>
 
                 <RadioButton
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="bottom"
+                    android:text="Manual"
                     android:checked="true"
-                    android:id="@+id/radioBottom"/>
+                    android:id="@+id/radioManual"/>
 
 
             </RadioGroup>
@@ -254,6 +254,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="2" />
+
 
         </LinearLayout>
 

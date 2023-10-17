@@ -1,53 +1,50 @@
 package com.example.playrecord
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioManager
-import android.net.Uri
 import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Environment
-import android.os.SystemClock.sleep
-import android.provider.DocumentsContract
 import android.util.Log
+import android.view.View
 import android.widget.*
 import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.getSystemService
-import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
-import kotlinx.coroutines.delay
+import java.net.Socket
 import kotlin.math.ceil
+
 
 class MainActivity : AppCompatActivity() {
     // Permission req code
     val REQUEST_PERMISSION_CODE = 1
     val REQUEST_FILE_SELECT = 2
     val REQUEST_INTERNET = 3
-
-    // button for start / stop
-    lateinit var btnStart : Button
-    lateinit var btnStop : Button
+    val REQUST_PHONE_STATE =4
 
     // thread for recorder / player
     lateinit var recorder: WavRecorder
     lateinit var player : AudioPlayer
 
+    // button for start / stop
+    lateinit var btnStart : Button
+    lateinit var btnStop : Button
+
     // variable for player
     var filePath = "init"
     var audioName = ""
-    var isPlayable = false
+
     var pastSR = 0
     var sampleRate = 48000
     var isStereo = true
 
     // variable for recorder
-    var isBottom = true
+    var isAuto = false
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,19 +72,6 @@ class MainActivity : AppCompatActivity() {
 
             setBtnCond()
         }
-
-        val groupMic = findViewById<RadioGroup>(R.id.radioGroupMic)
-        groupMic.setOnCheckedChangeListener { _, i ->
-            if(i==R.id.radioBottom){
-                isBottom=true
-                recorder.isBottom = isBottom
-            }
-            if(i==R.id.radioBack) {
-                isBottom=false
-                recorder.isBottom = isBottom
-            }
-        }
-
         //********* Player setting *************//
         val chkLoop = findViewById<CheckBox>(R.id.isLoop)
         chkLoop.isEnabled=isPlayable
@@ -156,15 +140,19 @@ class MainActivity : AppCompatActivity() {
         groupChannel.setOnCheckedChangeListener { _, i ->
             if(i==R.id.radioStereo){
                 isStereo = true
-                player.interrupt()
+                //player.interrupt()
                 player = AudioPlayer(filePath, sampleRate, isStereo)
                 player.start()
+                player.requestStop()
+                player.interrupt()
             }
             if(i==R.id.radioMono) {
                 isStereo = false
-                player.interrupt()
+                //player.interrupt()
                 player = AudioPlayer(filePath, sampleRate, isStereo)
                 player.start()
+                player.requestStop()
+                player.interrupt()
             }
         }
 
@@ -172,29 +160,53 @@ class MainActivity : AppCompatActivity() {
         btnStart = findViewById<Button>(R.id.startDual)
         btnStop = findViewById<Button>(R.id.stopDual)
 
-        btnStart.setOnClickListener {
-            if(isRecord) {
-                recorder.startRecording()
-                btnStart.isEnabled=false
-                btnStop.isEnabled=true
+        val groupMic = findViewById<RadioGroup>(R.id.radioGroupMic)
+        groupMic.setOnCheckedChangeListener { _, i ->
+            if(i==R.id.radioAuto){
+                isAuto=true
+                isLoop = false
+                chkLoop.isEnabled=false
+                setBtnCond()
             }
-            if(isPlayable){
-                player.interrupt()
-                player = AudioPlayer(filePath, sampleRate, isStereo)
-                player.start()
+            if(i==R.id.radioManual) {
+                isAuto=false
+                setBtnCond()
+            }
+        }
 
-                maxPeak = maxPeakEdit.text.toString().toFloat()
-                if(maxPeak > 1f)
-                    maxPeak = 1f
-                else if(maxPeak <= 0f)
-                    maxPeak = 1.0E-5F
-                player.volume = maxPeak
-                player.filePath = this.filePath
-                player.isNew = true
-
-                if(isLoop){
-                    btnStop.isEnabled=true
+        btnStart.setOnClickListener {
+            if(isAuto){
+                val ct = ClientThread()
+                ct.start()
+            }
+            else{
+                if(isRecord) {
+                    if(receivedFileName != null){
+                        findViewById<EditText>(R.id.recordFileName).setText(receivedFileName!!)
+                    }
+                    recorder.startRecording()
                     btnStart.isEnabled=false
+                    btnStop.isEnabled=true
+                }
+                if(isPlayable){
+                    //player.interrupt()
+                    player = AudioPlayer(filePath, sampleRate, isStereo)
+                    player.start()
+
+                    maxPeak = maxPeakEdit.text.toString().toFloat()
+                    if(maxPeak > 1f)
+                        maxPeak = 1f
+                    else if(maxPeak <= 0f)
+                        maxPeak = 1.0E-5F
+                    player.volume = maxPeak
+                    player.filePath = this.filePath
+                    player.isNew = true
+                    playEnd = false
+                    Log.d("PLAYER", "onCreate: start Player ${playEnd}")
+                    if(isLoop){
+                        btnStop.isEnabled=true
+                        btnStart.isEnabled=false
+                    }
                 }
             }
         }
@@ -220,6 +232,100 @@ class MainActivity : AppCompatActivity() {
                 player.requestStop()
                 player.interrupt()
             }
+
+        }
+
+
+    }
+    inner class ClientThread: Thread(){
+        private var output_msg: String? = null
+        private var input_msg: String? = null
+
+        val ip = "192.168.0.75"
+        val port = 3000
+
+        var dataSize = -1
+
+        override fun run(){
+            val socket = Socket(ip, port)
+
+            val outStream = socket.getOutputStream()
+            val inStream = socket.getInputStream()
+            var isInit = true
+            try{
+                if(isPlayable && isInit){
+                    output_msg ="player"
+                    outStream.write(output_msg!!.toByteArray())
+                    isInit = false
+                }
+                if(isRecord && isInit){
+                    output_msg="recorder"
+                    outStream.write(output_msg!!.toByteArray())
+                    isInit = false
+                }
+                while(true){
+                    if(socket.isConnected){
+                        while(dataSize < 1) {
+                            dataSize = inStream.available()
+                        }
+                        val dataArr = ByteArray(dataSize)
+                        dataSize = -1
+                        inStream.read(dataArr)
+                        input_msg = String(dataArr)
+
+                        Log.d("SOCKET", "run: $input_msg")
+
+                        val msg = input_msg!!.split("_")
+                        val chkMsg = "${msg[0]}_${msg[1]}"
+
+                        if(chkMsg == "is_ready"){
+                            output_msg = "ack"
+                            outStream.write(output_msg!!.toByteArray())
+                        }
+                        if(chkMsg == "start_play"){
+                            playEnd = false
+                            playEnd_second = false
+                            runOnUiThread{
+                                isAuto = false
+                                btnStart.performClick()
+                                isAuto = true
+                            }
+                            Log.d("PLAYER", "run b: ${playEnd}")
+                            while(!playEnd){
+                                continue
+                            }
+                            output_msg = "end"
+                            outStream.write(output_msg!!.toByteArray())
+                            Log.d("PLAYER", "run a: ${playEnd}")
+                        }
+
+                        if(chkMsg== "start_record"){
+                            runOnUiThread{
+                                isAuto = false
+                                val fileName = msg.drop(2).joinToString("_")
+                                Log.d("SOCKET", "run: $fileName")
+                                receivedFileName = fileName
+                                btnStart.performClick()
+                                isAuto = true
+                            }
+
+                        }
+                        if(chkMsg == "stop_record"){
+                            runOnUiThread {
+                                isAuto = false
+                                btnStop.performClick()
+                                isAuto = true
+                            }
+                            output_msg = "stopped"
+                            outStream.write(output_msg!!.toByteArray())
+                        }
+                    }
+
+                }
+            }
+            catch(e:Exception){
+                e.printStackTrace()
+            }
         }
 
     }
@@ -234,42 +340,82 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setBtnCond(){
-        if(isPlayable && !isRecord){
-            // only play audio
-            btnStart.text="재생 시작"
-            btnStop.text="재생 중지"
+        if(isAuto){
+            if(isPlayable && !isRecord){
+                // only play audio
+                btnStart.text="자동 재생 시작"
+                btnStop.text="자동 재생 중지"
 
-            btnStart.isVisible=true
-            if(isLoop){
+                btnStart.isVisible=true
+                if(isLoop){
+                    btnStop.isVisible=true
+                    btnStop.isEnabled=false
+                }
+                else{
+                    btnStop.isVisible=false
+                }
+            }
+            else if(!isPlayable && isRecord){
+                // only recording
+                btnStart.text="자동 녹음 시작"
+                btnStop.text="자동 녹음 중지"
+
+                btnStart.isVisible=true
+                //btnStop.isVisible=true
+                btnStop.isEnabled=false
+            }
+            else if(isPlayable && isRecord){
+                // play & record both
+                btnStart.text="자동 재생/녹음 시작"
+                btnStop.text="자동 재생/녹음 중지"
+
+                btnStart.isVisible=true
+                //btnStop.isVisible=true
+                btnStop.isEnabled=false
+            }
+            else{
+                // cannot play & record
+                btnStart.isVisible=false
+                btnStop.isVisible=false
+            }
+        }else{
+            if(isPlayable && !isRecord){
+                // only play audio
+                btnStart.text="재생 시작"
+                btnStop.text="재생 중지"
+
+                btnStart.isVisible=true
+                if(isLoop){
+                    btnStop.isVisible=true
+                    btnStop.isEnabled=false
+                }
+                else{
+                    btnStop.isVisible=false
+                }
+            }
+            else if(!isPlayable && isRecord){
+                // only recording
+                btnStart.text="녹음 시작"
+                btnStop.text="녹음 중지"
+
+                btnStart.isVisible=true
+                btnStop.isVisible=true
+                btnStop.isEnabled=false
+            }
+            else if(isPlayable && isRecord){
+                // play & record both
+                btnStart.text="재생/녹음 시작"
+                btnStop.text="재생/녹음 중지"
+
+                btnStart.isVisible=true
                 btnStop.isVisible=true
                 btnStop.isEnabled=false
             }
             else{
+                // cannot play & record
+                btnStart.isVisible=false
                 btnStop.isVisible=false
             }
-        }
-        else if(!isPlayable && isRecord){
-            // only recording
-            btnStart.text="녹음 시작"
-            btnStop.text="녹음 중지"
-
-            btnStart.isVisible=true
-            btnStop.isVisible=true
-            btnStop.isEnabled=false
-        }
-        else if(isPlayable && isRecord){
-            // play & record both
-            btnStart.text="재생/녹음 시작"
-            btnStop.text="재생/녹음 중지"
-
-            btnStart.isVisible=true
-            btnStop.isVisible=true
-            btnStop.isEnabled=false
-        }
-        else{
-            // cannot play & record
-            btnStart.isVisible=false
-            btnStop.isVisible=false
         }
     }
 
@@ -281,7 +427,8 @@ class MainActivity : AppCompatActivity() {
                 arrayOf(
                     Manifest.permission.RECORD_AUDIO,
                     Manifest.permission.READ_MEDIA_AUDIO,
-                    Manifest.permission.INTERNET
+                    Manifest.permission.INTERNET,
+                    Manifest.permission.READ_PHONE_STATE
                 ),
                 REQUEST_PERMISSION_CODE
             )
@@ -292,7 +439,8 @@ class MainActivity : AppCompatActivity() {
                     Manifest.permission.WRITE_EXTERNAL_STORAGE,
                     Manifest.permission.RECORD_AUDIO,
                     Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.INTERNET
+                    Manifest.permission.INTERNET,
+                    Manifest.permission.READ_PHONE_STATE
                 ),
                 REQUEST_PERMISSION_CODE
             )
@@ -313,7 +461,8 @@ class MainActivity : AppCompatActivity() {
                     val RecordPermission = grantResults[0] == PackageManager.PERMISSION_GRANTED
                     val ReadStoragePermission = grantResults[1] == PackageManager.PERMISSION_GRANTED
                     val InternetPermission = grantResults[2] == PackageManager.PERMISSION_GRANTED
-                    if (RecordPermission && ReadStoragePermission && InternetPermission) {
+                    val PhoneState = grantResults[3] == PackageManager.PERMISSION_GRANTED
+                    if (RecordPermission && ReadStoragePermission && InternetPermission && PhoneState) {
                         Toast.makeText(this@MainActivity, "Permission Granted", Toast.LENGTH_LONG)
                             .show()
                     } else {
@@ -328,7 +477,8 @@ class MainActivity : AppCompatActivity() {
                     val RecordPermission = grantResults[1] == PackageManager.PERMISSION_GRANTED
                     val ReadStoragePermission = grantResults[2] == PackageManager.PERMISSION_GRANTED
                     val InternetPermission = grantResults[2] == PackageManager.PERMISSION_GRANTED
-                    if (StoragePermission && RecordPermission && ReadStoragePermission && InternetPermission) {
+                    val PhoneState = grantResults[3] == PackageManager.PERMISSION_GRANTED
+                    if (StoragePermission && RecordPermission && ReadStoragePermission && InternetPermission && PhoneState) {
                         Toast.makeText(this@MainActivity, "Permission Granted", Toast.LENGTH_LONG)
                             .show()
                     } else {
@@ -342,6 +492,10 @@ class MainActivity : AppCompatActivity() {
 
     fun checkPermission(): Boolean {
         if(Build.VERSION.SDK_INT >= 33){
+            val result4: Int = ContextCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.READ_PHONE_STATE
+            )
             val result3: Int = ContextCompat.checkSelfPermission(
                 applicationContext,
                 Manifest.permission.INTERNET
@@ -354,8 +508,12 @@ class MainActivity : AppCompatActivity() {
                 applicationContext,
                 Manifest.permission.RECORD_AUDIO
             )
-            return result2 == PackageManager.PERMISSION_GRANTED  && result1 == PackageManager.PERMISSION_GRANTED && result3 == PackageManager.PERMISSION_GRANTED
+            return result2 == PackageManager.PERMISSION_GRANTED  && result1 == PackageManager.PERMISSION_GRANTED && result3 == PackageManager.PERMISSION_GRANTED && result4 == PackageManager.PERMISSION_GRANTED
         } else {
+            val result4: Int = ContextCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.READ_PHONE_STATE
+            )
             val result3: Int = ContextCompat.checkSelfPermission(
                 applicationContext,
                 Manifest.permission.INTERNET
@@ -372,13 +530,19 @@ class MainActivity : AppCompatActivity() {
                 applicationContext,
                 Manifest.permission.RECORD_AUDIO
             )
-            return result2 == PackageManager.PERMISSION_GRANTED && result == PackageManager.PERMISSION_GRANTED && result1 == PackageManager.PERMISSION_GRANTED && result3 == PackageManager.PERMISSION_GRANTED
+            return result2 == PackageManager.PERMISSION_GRANTED && result == PackageManager.PERMISSION_GRANTED && result1 == PackageManager.PERMISSION_GRANTED && result3 == PackageManager.PERMISSION_GRANTED  && result4 == PackageManager.PERMISSION_GRANTED
         }
     }
     companion object{
+        var isPlayable = false
+        var isPlaying = false
         var isRecord = false
         var isRecordStart = false;
         var isLoop = false
         var isStopStreamRequested = false
+        var receivedFileName: String? = null
+        var playEnd = false
+        var playEnd_second = false
+
     }
 }

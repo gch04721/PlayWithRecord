@@ -47,6 +47,7 @@ class AudioPlayer(filePath : String, samplingRate: Int, isStereo: Boolean) : Thr
                 try{
                     if(isNew && ((MainActivity.isRecord && MainActivity.isRecordStart) || !MainActivity.isRecord)){
                         this.audioTrack.setVolume(this.volume)
+                        MainActivity.playEnd = false
                         isPlaying = true
                         MainActivity.isStopStreamRequested = false
                         fd = RandomAccessFile(this.filePath, "r")
@@ -78,10 +79,14 @@ class AudioPlayer(filePath : String, samplingRate: Int, isStereo: Boolean) : Thr
                 audioTrack.write(audioBuffer, 0, bufSize)
                 bufCnt++
             }
-            Log.d("TEST", "run: interrupted, $isInterrupted")
+
             bufCnt = 0
             isStarted = false
             isPlaying = false
+            if(MainActivity.playEnd)
+                MainActivity.playEnd_second=true
+            MainActivity.playEnd = true
+            Log.d("PLAYER", "run: interrupted, ${MainActivity.playEnd}")
             audioTrack.stop()
         }
     }
