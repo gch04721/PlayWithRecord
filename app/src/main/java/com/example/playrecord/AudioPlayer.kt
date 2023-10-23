@@ -12,7 +12,7 @@ import java.io.RandomAccessFile
 class AudioPlayer(filePath : String, samplingRate: Int, isStereo: Boolean) : Thread() {
     var audioSessionID = 0
     var filePath = ""
-    private lateinit var audioTrack : AudioTrack
+    lateinit var audioTrack : AudioTrack
     lateinit var audioBuffer: ByteArray
     private var bufSize = 0
 
@@ -23,11 +23,16 @@ class AudioPlayer(filePath : String, samplingRate: Int, isStereo: Boolean) : Thr
     var isNew = false
     var volume = 0.1f
 
+    var samplingRate = 0
+    var isStereo = false
+
 
     lateinit var fd : RandomAccessFile
 
 
     init{
+        this.samplingRate=samplingRate
+        this.isStereo = isStereo
         buildPlayer(samplingRate, isStereo)
     }
 
@@ -36,6 +41,9 @@ class AudioPlayer(filePath : String, samplingRate: Int, isStereo: Boolean) : Thr
             continue
 
         if(this.isStarted){
+            while(AudioTrack.STATE_INITIALIZED != audioTrack.state){
+                buildPlayer(samplingRate, isStereo)
+            }
             this.audioTrack.play()
             var playOffset = 0
 

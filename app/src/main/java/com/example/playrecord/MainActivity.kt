@@ -3,6 +3,7 @@ package com.example.playrecord
 import android.Manifest
 import android.content.pm.PackageManager
 import android.media.AudioManager
+import android.media.AudioTrack
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -133,28 +134,28 @@ class MainActivity : AppCompatActivity() {
         else if(maxPeak <= 0f)
             maxPeak = 1.0E-5F
 
-        player = AudioPlayer(filePath, sampleRate, isStereo)
-        player.start() // make/run audio player thread
+//        player = AudioPlayer(filePath, sampleRate, isStereo)
+//        player.start() // make/run audio player thread
 
-        val groupChannel = findViewById<RadioGroup>(R.id.radioGroupChannel)
-        groupChannel.setOnCheckedChangeListener { _, i ->
-            if(i==R.id.radioStereo){
-                isStereo = true
-                //player.interrupt()
-                player = AudioPlayer(filePath, sampleRate, isStereo)
-                player.start()
-                player.requestStop()
-                player.interrupt()
-            }
-            if(i==R.id.radioMono) {
-                isStereo = false
-                //player.interrupt()
-                player = AudioPlayer(filePath, sampleRate, isStereo)
-                player.start()
-                player.requestStop()
-                player.interrupt()
-            }
-        }
+//        val groupChannel = findViewById<RadioGroup>(R.id.radioGroupChannel)
+//        groupChannel.setOnCheckedChangeListener { _, i ->
+//            if(i==R.id.radioStereo){
+//                isStereo = true
+//                //player.interrupt()
+//                player = AudioPlayer(filePath, sampleRate, isStereo)
+//                player.start()
+//                player.requestStop()
+//                player.interrupt()
+//            }
+//            if(i==R.id.radioMono) {
+//                isStereo = false
+//                //player.interrupt()
+//                player = AudioPlayer(filePath, sampleRate, isStereo)
+//                player.start()
+//                player.requestStop()
+//                player.interrupt()
+//            }
+//        }
 
         //********* Start / Stop button *************//
         btnStart = findViewById<Button>(R.id.startDual)
